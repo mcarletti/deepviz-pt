@@ -7,15 +7,15 @@ def softmax(x):
     return exp / np.sum(exp)
 
 
-def predictions_to_class_info(pred):
+def predictions_to_class_info(pred, label_file):
     pred = softmax(pred)
     class_id = np.argmax(pred)
     class_prob = pred[class_id]
-    class_labels = np.loadtxt(open('data/ilsvrc_2012_labels.txt'), dtype=object, delimiter='\n')
+    class_labels = np.loadtxt(open(label_file), dtype=object, delimiter='\n')
     return class_id, class_labels[class_id], pred[class_id]
 
 
-def compute_saliency_map(model, tensor_image, k_size, ref_class_id, ref_class_prob):
+def compute_saliency_map(model, tensor_image, k_size, ref_class_id, ref_class_prob, thr=0.0):
     assert k_size >= 3 and k_size % 2 == 1
 
     saliency_values = []
@@ -33,7 +33,7 @@ def compute_saliency_map(model, tensor_image, k_size, ref_class_id, ref_class_pr
             pred_class_id = np.argmax(pred)
             pred = 0.0 if ref_class_id != pred_class_id else softmax(pred)[pred_class_id]
             pred_err = ref_class_prob - pred
-            if np.abs(pred_err) < 0.05:
+            if np.abs(pred_err) < thr:
                 pred_err = 0.0
             saliency_values.append(pred_err)
     

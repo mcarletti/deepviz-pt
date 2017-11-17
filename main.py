@@ -13,12 +13,19 @@ import utils
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--model_filename', type=str, default=None)
+parser.add_argument('--label_filename', type=str, default=None)
 parser.add_argument('--input_image', type=str, required=True)
 parser.add_argument('--k_size', type=int, default=15)
+parser.add_argument('--thr', type=float, default=0.0)
 args = parser.parse_args()
 
+if args.model_filename is not None or args.label_filename is not None:
+    assert os.path.exists(args.model_filename)
+    assert os.path.exists(args.label_filename)
 assert os.path.exists(args.input_image)
 assert args.k_size >= 3 and args.k_size % 2 == 1
+assert args.thr >= 0.0
 
 # check cuda support
 HAS_CUDA = True
@@ -27,14 +34,19 @@ if not torch.cuda.is_available():
     HAS_CUDA = False
 
 print('Loading pretrained model')
-model = torchvision.models.vgg16(pretrained=True)
+if args.model_filename is not None:
+    model = torch.load(args.model_filename)
+    label_file = args.label_filename
+else:
+    model = torchvision.models.vgg16_bn(pretrained=True)
+    label_file = 'data/ilsvrc_2012_labels.txt'
 model.eval()
 if HAS_CUDA:
     model.cuda()
 
 print('Load and [pre]process image')
 image_orig = Image.open(args.input_image)
-image_orig = image_orig.resize((224, 224), Image.NEAREST)
+image_orig = image_orig.resize((100, 100), Image.NEAREST)
 image_orig = np.asarray(image_orig)
 
 mu = (0.485, 0.456, 0.406)
@@ -48,11 +60,11 @@ if HAS_CUDA:
 pred = model(torch.autograd.Variable(image))
 pred = pred.data.cpu().numpy().squeeze()
 
-class_id, class_label, class_prob = utils.predictions_to_class_info(pred)
+class_id, class_label, class_prob = utils.predictions_to_class_info(pred, label_file)
 print(class_id, class_label, class_prob)
 
 print('Computing saliency map')
-smap = utils.compute_saliency_map(model, image[0], args.k_size, class_id, class_prob)
+smap = utils.compute_saliency_map(model, image[0], args.k_size, class_id, class_prob, args.thr)
 
 from scipy.misc import imresize
 mask = imresize(smap, image_orig.shape[:2])
