@@ -69,3 +69,20 @@ def show_feature_maps(feats):
         plt.subplot(h_size, h_size, i)
         plt.imshow(feats[i-1])
     plt.show()
+
+
+def compute_feature_correlation(feats):
+    nfts = feats.shape[0]
+    diff_mat = np.zeros((nfts, nfts), dtype=np.float32)
+    for i in range(nfts):
+        for j in range(nfts):
+            if i != j:
+                diff_mat[i,j] = np.mean(np.abs(feats[i] - feats[j]))
+    return diff_mat
+
+
+ def show_diff_mat(diff_mat):
+    sorted_dm = diff_mat[:, np.argsort(np.sum(diff_mat, axis=1))]
+    plt.imshow(sorted_dm)
+    plt.colorbar()
+    plt.show()
