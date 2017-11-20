@@ -16,13 +16,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--model_filename', type=str, default=None)
 parser.add_argument('--label_filename', type=str, default=None)
 parser.add_argument('--input_image', type=str, required=True)
-parser.add_argument('--k_size', type=int, default=15)
+parser.add_argument('--k_size', type=int, default=23)
 parser.add_argument('--thr', type=float, default=0.0)
 args = parser.parse_args()
 
 if args.model_filename is not None or args.label_filename is not None:
     assert os.path.exists(args.model_filename)
-    assert os.path.exists(args.label_filename)
+    assert os.path.exists(args.label_filename)    
 assert os.path.exists(args.input_image)
 assert args.k_size >= 3 and args.k_size % 2 == 1
 assert args.thr >= 0.0
@@ -45,8 +45,9 @@ if HAS_CUDA:
     model.cuda()
 
 print('Load and [pre]process image')
+target_size = (224, 224)
 image_orig = Image.open(args.input_image)
-image_orig = image_orig.resize((100, 100), Image.NEAREST)
+image_orig = image_orig.resize(target_size, Image.NEAREST)
 image_orig = np.asarray(image_orig)
 
 mu = (0.485, 0.456, 0.406)
@@ -70,13 +71,15 @@ from scipy.misc import imresize
 mask = imresize(smap, image_orig.shape[:2])
 
 plt.figure(1)
-plt.subplot(1,3,1)
-plt.title(class_label)
+plt.subplot(2,2,1)
 plt.imshow(image_orig)
-plt.subplot(1,3,2)
-plt.title("Saliency map")
+plt.colorbar()
+plt.subplot(2,2,3)
 plt.imshow(smap, cmap=plt.get_cmap('jet'))
-plt.subplot(1,3,3)
+plt.colorbar()
+plt.subplot(1,2,2)
+plt.title(class_label + ' [{:.1f} %]'.format(100 * class_prob))
 plt.imshow(image_orig)
 plt.imshow(mask, alpha=0.5, cmap=plt.get_cmap('jet'))
+plt.savefig('saliency.svg')
 plt.show()
