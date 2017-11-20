@@ -42,3 +42,30 @@ def compute_saliency_map(model, tensor_image, k_size, ref_class_id, ref_class_pr
     saliency_map = saliency_map.reshape((size, size))
 
     return saliency_map
+
+
+def get_feature_maps(model, tensor_image, layer_id=None, has_cuda=False):
+    layers = list(model.features.children())
+    if layer_id is not None:
+        if layer_id > 0:
+            layer_id += 1
+        layers = layers[:layer_id]
+    feature_extractor = torch.nn.Sequential(*layers)
+    if has_cuda:
+        feature_extractor.cuda()
+    feats = feature_extractor(torch.autograd.Variable(tensor_image.unsqueeze(0)))
+    feats = feats.data.cpu().squeeze_().numpy()
+    return feats
+
+
+def show_feature_maps(feats):
+    import matplotlib.pyplot as plt
+
+    nfts = feats.shape[0]
+    h_size = int(np.ceil(np.sqrt(nfts)))
+
+    plt.figure()
+    for i in range(1, nfts + 1):
+        plt.subplot(h_size, h_size, i)
+        plt.imshow(feats[i-1])
+    plt.show()
